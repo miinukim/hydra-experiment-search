@@ -355,6 +355,7 @@ function showDetails(index) {
   loadData(record["_results_dir"]);
 }
 async function loadData(resultsDir) {
+  const root = document.getElementById("root").value;
   const params = new URLSearchParams({ results_dir: resultsDir });
   const response = await fetch("/api/details?" + params.toString());
   const payload = await response.json();
@@ -370,7 +371,7 @@ async function loadData(resultsDir) {
     if (imageArtifacts.length) {
       html += `<h4>Plots</h4><div class="plot-grid">`;
       for (const artifact of imageArtifacts) {
-        const href = "/artifact?path=" + encodeURIComponent(artifact.path);
+        const href = "/artifact?path=" + encodeURIComponent(artifact.path) + "&root=" + encodeURIComponent(root);
         html += `<div class="plot-card"><div class="muted">${escapeHtml(artifact.name)}</div><a class="plot-link" href="${href}" data-preview-src="${href}" data-preview-title="${escapeHtml(artifact.name)}"><img src="${href}" alt="${escapeHtml(artifact.name)}" /></a></div>`;
       }
       html += `</div>`;
@@ -378,7 +379,7 @@ async function loadData(resultsDir) {
     if (otherArtifacts.length) {
       html += `<h4>Artifacts</h4><ul class="artifact-list">`;
       for (const artifact of otherArtifacts) {
-        const href = "/artifact?path=" + encodeURIComponent(artifact.path);
+        const href = "/artifact?path=" + encodeURIComponent(artifact.path) + "&root=" + encodeURIComponent(root);
         html += `<li><a href="${href}" target="_blank">${escapeHtml(artifact.name)}</a></li>`;
       }
       html += `</ul>`;
@@ -545,8 +546,9 @@ class Handler(BaseHTTPRequestHandler):
     def _send_artifact(self, query: str) -> None:
         params = parse_qs(query)
         raw_path = params.get("path", [""])[0]
+        raw_root = params.get("root", [self.default_root])[0]
         path = Path(unquote(raw_path)).expanduser().resolve()
-        default_root = Path(self.default_root).expanduser().resolve()
+        default_root = Path(unquote(raw_root)).expanduser().resolve()
         if default_root not in path.parents and path != default_root:
           self.send_error(HTTPStatus.FORBIDDEN, "Artifact path outside outputs root")
           return
