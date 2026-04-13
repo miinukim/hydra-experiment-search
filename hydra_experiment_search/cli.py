@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Sequence
 
 DEFAULT_CONFIG_GLOB = "**/results/resolved_config.yaml"
+DEFAULT_ROOT = "/home/mwkim/qrc/experiments/outputs/"
 
 
 DEFAULT_COLUMNS = [
@@ -21,7 +22,7 @@ def _format_value(value: object) -> str:
     return str(value)
 
 
-def build_parser(default_root: str = "outputs") -> argparse.ArgumentParser:
+def build_parser(default_root: str = DEFAULT_ROOT) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Search Hydra experiment outputs by resolved config fields.",
     )
@@ -49,12 +50,12 @@ def build_parser(default_root: str = "outputs") -> argparse.ArgumentParser:
     return parser
 
 
-def parse_cli_args(argv: Sequence[str] | None = None, default_root: str = "outputs") -> argparse.Namespace:
+def parse_cli_args(argv: Sequence[str] | None = None, default_root: str = DEFAULT_ROOT) -> argparse.Namespace:
     parser = build_parser(default_root=default_root)
     return parser.parse_args(argv)
 
 
-def main(argv: Sequence[str] | None = None, default_root: str = "outputs") -> None:
+def main(argv: Sequence[str] | None = None, default_root: str = DEFAULT_ROOT) -> None:
     args = parse_cli_args(argv=argv, default_root=default_root)
     from .index import filter_experiments, index_experiments
 

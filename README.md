@@ -10,6 +10,8 @@ It indexes runs by scanning for resolved config files, flattens the config into 
 
 It is designed to work independently of any specific training or simulation codebase. If your repository uses Hydra and writes per-run configs, this package can index and browse those runs.
 
+The default search root is `/home/mwkim/qrc/outputs/`. Override it with `--root` whenever you want to scan a narrower tree.
+
 ## What it assumes
 
 By default, the package looks for:
@@ -46,7 +48,7 @@ Requirements:
 ```python
 from hydra_experiment_search import filter_experiments, index_experiments
 
-records = index_experiments("outputs")
+records = index_experiments("/home/mwkim/qrc/outputs/")
 matches = filter_experiments(records, ["model.depth=6", "trainer.max_epochs>=50"])
 ```
 
@@ -55,8 +57,8 @@ For embedding in another repo or tool:
 ```python
 from hydra_experiment_search import build_web_handler, parse_cli_args
 
-args = parse_cli_args(["--root", "outputs", "model.depth=6"])
-handler_cls = build_web_handler(root="outputs", config_glob="**/.hydra/config.yaml", config_name="config.yaml")
+args = parse_cli_args(["model.depth=6"])
+handler_cls = build_web_handler(root="/home/mwkim/qrc/outputs/", config_glob="**/.hydra/config.yaml", config_name="config.yaml")
 ```
 
 You can also start the web server programmatically:
@@ -67,7 +69,7 @@ from hydra_experiment_search import serve
 serve(
     host="127.0.0.1",
     port=8765,
-    root="outputs",
+    root="/home/mwkim/qrc/outputs/",
     config_glob="**/.hydra/config.yaml",
     config_name="config.yaml",
 )
@@ -76,7 +78,7 @@ serve(
 ## CLI
 
 ```bash
-hydra-experiment-search --root outputs model.depth=6 trainer.max_epochs>=50
+hydra-experiment-search model.depth=6 trainer.max_epochs>=50
 ```
 
 Typical filters:
@@ -90,7 +92,7 @@ Show selected columns:
 
 ```bash
 hydra-experiment-search \
-  --root outputs \
+  --root /home/mwkim/qrc/outputs \
   --show _date _time _run_dir model.depth trainer.max_epochs \
   model.depth=6
 ```
@@ -98,11 +100,12 @@ hydra-experiment-search \
 ## Web UI
 
 ```bash
-hydra-experiment-search-web --root outputs --host 127.0.0.1 --port 8765
+hydra-experiment-search-web --host 127.0.0.1 --port 8765
 ```
 
 The web UI supports:
 
+- experiment selection with autocomplete when outputs are organized as `outputs_root/experiment_name/date/time`
 - flat config-key search with autocomplete
 - CSV previews
 - artifact and plot preview
@@ -120,14 +123,14 @@ Then open `http://127.0.0.1:8765`.
 Run as a module if console scripts are not on your path:
 
 ```bash
-python -m hydra_experiment_search.web --root outputs
-python -m hydra_experiment_search.cli --root outputs model.depth=6
+python -m hydra_experiment_search.web
+python -m hydra_experiment_search.cli model.depth=6
 ```
 
 ## General integration steps
 
 1. Ensure your repo writes one resolved Hydra config per run.
-2. Decide the search root you want to scan, for example `outputs/`.
+2. Decide the search root you want to scan. The default is `/home/mwkim/qrc/outputs/`.
 3. Identify the config file pattern for your project.
    Common choices are `**/results/resolved_config.yaml` or `**/.hydra/config.yaml`.
 4. Install the package into the same Python environment as your project.
@@ -146,13 +149,13 @@ Examples:
 
 ```bash
 hydra-experiment-search \
-  --root outputs \
+  --root /home/mwkim/qrc/outputs \
   --config-glob '**/results/resolved_config.yaml'
 ```
 
 ```bash
 hydra-experiment-search \
-  --root outputs \
+  --root /home/mwkim/qrc/outputs \
   --config-glob '**/.hydra/config.yaml'
 ```
 
@@ -162,14 +165,14 @@ If your project stores configs somewhere else, point the package at the right fi
 
 ```bash
 hydra-experiment-search \
-  --root outputs \
+  --root /home/mwkim/qrc/outputs \
   --config-glob '**/.hydra/config.yaml' \
   trainer.max_epochs>=50
 ```
 
 ```bash
 hydra-experiment-search-web \
-  --root outputs \
+  --root /home/mwkim/qrc/outputs \
   --config-glob '**/.hydra/config.yaml' \
   --config-name config.yaml
 ```
@@ -180,14 +183,14 @@ Use the standalone tool against `qrcdim` outputs:
 
 ```bash
 hydra-experiment-search-web \
-  --root /home/mwkim/qrc/qrcdim/experiments/outputs
+  --root /home/mwkim/qrc/outputs/
 ```
 
 Or, if the runs store Hydra configs under `.hydra`:
 
 ```bash
 hydra-experiment-search-web \
-  --root /home/mwkim/qrc/qrcdim/experiments/outputs \
+  --root /home/mwkim/qrc/outputs/ \
   --config-glob '**/.hydra/config.yaml' \
   --config-name config.yaml
 ```

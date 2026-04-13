@@ -20,6 +20,35 @@ class ExperimentRecord:
     data: dict[str, Any]
 
 
+def resolve_experiment_root(root: str | Path, experiment: str | None = None) -> Path:
+    root_path = Path(root).expanduser().resolve()
+    experiment_name = (experiment or "").strip()
+    if not experiment_name:
+        return root_path
+    experiment_path = Path(experiment_name)
+    if experiment_path.is_absolute() or len(experiment_path.parts) != 1 or experiment_name in {".", ".."}:
+        raise ValueError(f"Invalid experiment name '{experiment_name}'")
+    selected_root = (root_path / experiment_name).resolve()
+    if root_path not in selected_root.parents:
+        raise ValueError(f"Experiment path outside outputs root: '{experiment_name}'")
+    return selected_root
+
+
+def list_experiments(
+    root: str | Path,
+    config_glob: str = DEFAULT_CONFIG_GLOB,
+) -> list[dict[str, Any]]:
+    root_path = Path(root).expanduser().resolve()
+    if not root_path.exists():
+        return []
+    experiments: list[dict[str, Any]] = []
+    for child in sorted(path for path in root_path.iterdir() if path.is_dir()):
+        config_count = sum(1 for _ in child.glob(config_glob))
+        if config_count:
+            experiments.append({"name": child.name, "path": str(child), "config_count": config_count})
+    return experiments
+
+
 def _flatten(prefix: str, value: Any, out: dict[str, Any]) -> None:
     if isinstance(value, dict):
         for key, child in value.items():
@@ -72,15 +101,28 @@ def index_experiments(
         resolved = OmegaConf.to_container(OmegaConf.load(config_path), resolve=True)
         flat: dict[str, Any] = {}
         _flatten("", resolved, flat)
-        timestamp_parts = run_dir.parts[-2:] if len(run_dir.parts) >= 2 else ("", "")
+        try:
+            relative_parts = run_dir.relative_to(root_path).parts
+        except ValueError:
+            relative_parts = ()
+        if len(relative_parts) >= 3:
+            experiment_name = relative_parts[0]
+            date, time = relative_parts[1], relative_parts[2]
+        elif len(relative_parts) >= 2:
+            experiment_name = root_path.name
+            date, time = relative_parts[0], relative_parts[1]
+        else:
+            experiment_name = ""
+            date, time = run_dir.parts[-2:] if len(run_dir.parts) >= 2 else ("", "")
         flat.update(
             {
+                "_experiment": experiment_name,
                 "_run_dir": str(run_dir),
                 "_results_dir": str(results_dir),
                 "_config_path": str(config_path),
                 "_config_name": config_name,
-                "_date": timestamp_parts[0],
-                "_time": timestamp_parts[1],
+                "_date": date,
+                "_time": time,
             }
         )
         flat.update(_csv_metadata(results_dir))
